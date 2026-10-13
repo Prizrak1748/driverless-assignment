@@ -55,17 +55,31 @@ def path_length(points: List[Point], path: List[int]) -> float:
 # ---------------------------------------------------------------------------
 
 def associate(map_points: Map, observations: List[Point]) -> List[Tuple[int, int]]:
-    """Associate every observation with the map point it was generated from.
+    candidates = []
+    for i, map_point in enumerate(map_points):
+        for j, observation in enumerate(observations):
+            distance = math.dist(map_points, observations)
+            candidates.append((distance, i, j))
+    candidates.sort()
 
-    Given the map and the observations (noisy, incomplete and shuffled),
-    recover the observation-to-map-point correspondence.
+    used_map = set()
+    used_observations = set()
+    associations = []
 
-    Returns:
-        The association couples as a list of ``(map_index, observation_index)``
-        tuples, e.g. ``[(0, 12), (3, 5)]`` means that observation 12 was
-        generated from map point 0, and observation 5 from map point 3.
-    """
-    raise NotImplementedError("Step 3 (data association) is yours to implement")
+
+    for distance, i, j in candidates:
+        if i in used_map or j in used_observations:
+            continue
+
+        associations.append((i, j))
+        used_map.add(i)
+        used_observations.add(j)
+
+    return associations
+
+        
+
+    
 
 
 # ---------------------------------------------------------------------------
@@ -77,18 +91,19 @@ def correct_map(
     observations: List[Point],
     associations: List[Tuple[int, int]],
 ) -> Map:
-    """Correct the map, given the data association.
+    corrected = list(map_points)
 
-    For every association couple ``(i, j)``, the corrected position of map
-    point ``i`` is the average (midpoint) of ``map_points[i]`` and
-    ``observations[j]``. Map points without an associated observation keep
-    their original position.
+    for i, j in associations:
+        old_x, old_y = map_points[i]
+        obs_x, obs_y = observations[j]
 
-    Returns:
-        The corrected map: a list of ``(x, y)`` tuples with the same length
-        and the same order as ``map_points``.
-    """
-    raise NotImplementedError("Step 4 (map correction) is yours to implement")
+        corrected[i] = (
+            (old_x + obs_x) / 2,
+            (old_y + obs_y) / 2
+        )
+
+    return corrected
+    
 
 
 # ---------------------------------------------------------------------------
@@ -96,23 +111,28 @@ def correct_map(
 # ---------------------------------------------------------------------------
 
 def find_path(corrected_map: Map) -> List[int]:
-    """Find a path that visits every node of the corrected map exactly once.
+    if len(corrected_map) == 0:
+        return []
 
-    Return the path as a list of node indices in visit order, e.g.
-    ``[4, 0, 11, 2, ...]``. A path that includes each node exactly once is
-    usually called a *Hamiltonian path*: any permutation of the node indices
-    is a formally valid answer, but:
+    path = [0]
+    unvisited = set(range(1, len(corrected_map)))
 
-    * **Bonus 1 (+1 point)**: use a heuristic or an algorithm (e.g. nearest
-      neighbour, greedy insertion, 2-opt, ...) so that the total length of
-      your path is clearly shorter than the worst possible path. You can
-      measure it with :func:`path_length`.
+    while unvisited:
+        current = path[-1]
 
-    * **Bonus 2 (+1 point)**: no arrow of the path goes over a previous
-      arrow (arrows that only touch at a shared node do not count as
-      crossings). You can check it visually with ``visualize_path``.
-    """
-    raise NotImplementedError("Step 5 (path finding) is yours to implement")
+        nearest = min(
+            unvisited,
+            key=lambda i: math.dist(
+                corrected_map[current],
+                corrected_map[i]
+            )
+        )
+
+        path.append(nearest)
+        unvisited.remove(nearest)
+
+    return path
+    
 
 
 # ---------------------------------------------------------------------------
